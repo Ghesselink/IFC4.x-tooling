@@ -5,7 +5,10 @@ import subprocess
 
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-version_dict = json.load(open(os.path.join(CODE_DIR, 'version.json'), encoding='utf-8'))
+REPO_DIR = os.path.abspath(os.environ.get("REPO_DIR", os.path.join(CODE_DIR, "..")))
+# version.json describes the content, so it lives in the content repo; the old place in code/ still works
+_version_file = next(p for p in (os.path.join(REPO_DIR, 'version.json'), os.path.join(CODE_DIR, 'version.json')) if os.path.exists(p))
+version_dict = json.load(open(_version_file, encoding='utf-8'))
 version_tuple = version_dict['version']
 status = version_dict['status']
 status_number = list(version_dict['@status-options'].keys()).index(status)
@@ -16,7 +19,6 @@ target_branch = os.environ.get('REPO_BRANCH') or f'ifc{version_tuple[0]}.{versio
 prefixes = ('IFC', 'X', '_ADD', '_TC')
 schema_version_string = ''.join(''.join(map(str, t)) if t[1] else '' for t in zip(prefixes, version_tuple))
 spec_version_string = f'IFC {".".join(map(str, version_tuple))}'
-REPO_DIR = os.path.abspath(os.environ.get("REPO_DIR", os.path.join(CODE_DIR, "..")))
 
 
 def _git(*args):
