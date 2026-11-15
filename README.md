@@ -55,8 +55,8 @@ There are three aspects of the IFC documentation server: **Schema**,
  - **Base schema** - The schema is stored in `schemas/IFC.xml`. This is
    currently a monolithic XMI document which describes all of the IFC schema
    modeled in UML.
- - **Property set definitions** - definitions for property and quantity sets are
-   stored in `reference_schemas/psd/`
+ - **Property set definitions** - property and quantity sets are part of the UML
+   as well; `generators.pset` writes them as XML
 
 UML modeling knowledge is a prerequisite for those modifying the **Schema**.
 Any changes to the schema must follow the [IFC Change
@@ -397,6 +397,23 @@ Python modules are all captured in `requirements.txt`
 ## Development
 
 Developer documentation still need to recreated after the migration from a flask-based server to a static html generator (`./code/generators/html`)
+
+### Building
+
+The tooling builds a checkout of [IFC4.x-development](https://github.com/buildingSMART/IFC4.x-development), with this repository checked out in it as `code/`:
+
+```sh
+git clone -b ifc4.3-main https://github.com/buildingSMART/IFC4.x-development
+git clone https://github.com/buildingSMART/IFC4.x-tooling IFC4.x-development/code
+```
+
+`version.json` in the root of that checkout says which version is built. The sequence of steps is in `.github/workflows/ci.yml` here, which builds every change to the tooling, and in `publish-output.yml` in IFC4.x-development, which publishes.
+
+The site build reads two more checkouts, set up in `ci.yml`: the sample models in `examples/` next to the checkout of IFC4.x-development (without them Annex E has no example pages), and the translations: a checkout of [IFC-translations](https://github.com/buildingSMART/IFC-translations) (branch `translations`) in `translations/` next to it, or wherever `TRANSLATIONS_SRC_DIR` points.
+
+### Reference data
+
+The change log compares the schema with the earlier IFC releases. `python fetch_reference_schemas.py ..` copies their EXPRESS schemas and property sets from [Standards-builds](https://github.com/buildingSMART/Standards-builds) into `reference_schemas/` of the checkout; a local checkout of Standards-builds as second argument avoids the download. The lists of deprecated entities per release are not published there and are kept in `reference_data/`.
 
 ### Generators
 

@@ -15,6 +15,8 @@ from ifcopenshell.express import express_parser
 from collections import defaultdict
 from generators.util.xmi_document import fix_schema_name
 from generators.util.md import markdown_attribute_parser
+from fetch_reference_schemas import RELEASES
+from version import version_tuple
 
 import markdown
 import bs4
@@ -366,19 +368,16 @@ if __name__ == "__main__":
 
     if repo_dir:
         d = os.path.join(repo_dir, "reference_schemas")
-        names = [
-                "ifc4", "IFC4_ADD2_TC1.exp", "deprecated_entities_Ifc4.0.2.2.json", "psd_IFC4_ADD2_TC1",
-        ]
-        
-        if not is_iso:
-            names = ["ifc23", "IFC2X3_TC1.exp", "deprecated_entities_Ifc2.3.0.1.json", "psd_IFC2x3"] + names
+        # The baselines are the releases older than the version being built, so this
+        # script is the same for every version. An ISO build only compares with the
+        # ISO releases. The label is how the docs name a version in a notice: ifc4, ifc43.
+        label = lambda version: ("ifc%d%d" % version).rstrip("0")
+        current_version = tuple(version_tuple[:2])
+        names = []
+        for version, schema, deprecated, psd, _, _ in RELEASES:
+            if version < current_version and (not is_iso or version in ((4, 0), (4, 3))):
+                names += [label(version), schema, deprecated, psd]
 
-            names += [
-                # no IfcDoc branch for 4x1
-                "ifc41", "IFC4x1.exp", "deprecated_entities_Ifc4.0.2.2.json", "psd_IFC4x1",
-                "ifc42", "IFC4x2.exp", "deprecated_entities_Ifc4.2.0.1.json", "psd_IFC4x2"
-            ]
-            
         files = list(map(functools.partial(os.path.join, d), names))
 
         # Current-schema artefacts are generated into <repo>/output by the
@@ -399,7 +398,7 @@ if __name__ == "__main__":
         deprecated_entities = json.load(open(structure_path, encoding="utf-8"))["deprecated_entities"]
 
         files += [
-            "ifc43",
+            label(current_version),
             current("IFC.exp"),
             deprecated_entities,
             current("psd"),

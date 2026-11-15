@@ -42,10 +42,14 @@ def clear_translation_caches():
     _shared_cache.clear()
     _catalog_cache.clear()
     
-TRANSLATIONS_SRC_DIR = os.environ.get(
+# A checkout of buildingSMART/IFC-translations (branch translations) next to the
+# content checkout, as the workflows lay it out. The path is resolved: the .po
+# files are found resolved, and a symlinked folder would otherwise put the
+# compiled files next to the sources instead of in TRANSLATIONS_BUILD_DIR.
+TRANSLATIONS_SRC_DIR = os.path.realpath(os.environ.get(
     "TRANSLATIONS_SRC_DIR",
-    os.path.join(os.path.dirname(__file__), "..", "..", "translate_repo", "translations")
-)
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "translations", "translations")
+))
 TRANSLATIONS_BUILD_DIR = os.environ.get(
     "TRANSLATIONS_BUILD_DIR",
     os.path.join(os.path.dirname(__file__), "compiled_translations")

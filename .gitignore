@@ -13,3 +13,5 @@ xmi_concepts.json
 xmi_mvd_concepts.json
 mvd_entity_usage.json
 listing_*.json
+# compiled translations of a local build (TRANSLATIONS_BUILD_DIR not set)
+generators/html/compiled_translations/

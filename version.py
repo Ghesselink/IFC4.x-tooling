@@ -7,7 +7,9 @@ CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 REPO_DIR = os.path.abspath(os.environ.get("REPO_DIR", os.path.join(CODE_DIR, "..")))
 # version.json describes the content, so it lives in the content repo; the old place in code/ still works
-_version_file = next(p for p in (os.path.join(REPO_DIR, 'version.json'), os.path.join(CODE_DIR, 'version.json')) if os.path.exists(p))
+_version_file = next((p for p in (os.path.join(REPO_DIR, 'version.json'), os.path.join(CODE_DIR, 'version.json')) if os.path.exists(p)), None)
+if _version_file is None:
+    raise FileNotFoundError(f"No version.json in {REPO_DIR}. This repository is used as code/ inside a checkout of IFC4.x-development, see README.md.")
 version_dict = json.load(open(_version_file, encoding='utf-8'))
 version_tuple = version_dict['version']
 status = version_dict['status']

@@ -43,6 +43,7 @@ hierarchy = [
         ("IfcRoadDomain", defaultdict(list)),
         ("IfcStructuralAnalysisDomain", defaultdict(list)),
         ("IfcStructuralElementsDomain", defaultdict(list)),
+        ("IfcTunnelDomain", defaultdict(list)),
     ]),
     ("Resource definition data schemas", [
         ("IfcActorResource", defaultdict(list)),
@@ -346,7 +347,8 @@ def write_structure(xmi_doc, psd_dir: Path, output_path: Path) -> None:
     payload = {
         "entity_supertype": supertype,
         "entity_to_package": entity_to_package,
-        "hierarchy": hierarchy,
+        # a schema without content belongs to another version of IFC (IfcTunnelDomain before 4.4)
+        "hierarchy": [(cat, [(name, members) for name, members in schemas if any(members.values())]) for cat, schemas in hierarchy],
         "entity_attributes": attributes,
         "entity_definitions": definitions,
         "pset_definitions": psets,

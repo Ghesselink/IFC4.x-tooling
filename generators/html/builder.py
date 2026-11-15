@@ -444,6 +444,8 @@ class StaticTemplateRenderer(markdown_mixin):
             "get_page_history": lambda path: page_history(context.get("repo_dir", self.config.repo_root), path),
             "header_color": color,
             "status_message": version.status_message,
+            # every version has its own logo in docs/assets/img
+            "logo": "buildingSMART_RGB_IFC%d_%d_v4_transparent.png" % tuple(version.version_tuple[:2]),
         }
         payload.update(context)
         return payload
