@@ -14,6 +14,7 @@ import subprocess
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
+from fnmatch import fnmatchcase
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -31,7 +32,7 @@ from .refiner import BeautifulSoup, HtmlRefiner, ListingCollector
 from .search import SearchIndexBuilder
 from . import translate
 from ..util.xmi_document import SCHEMA_NAME
-from . import md as mdp
+from ..util import md as mdp
 from git_history import page_history
 
 from version import target_branch as REPO_BRANCH
@@ -1034,11 +1035,13 @@ class StaticTemplateRenderer(markdown_mixin):
             is_bold = False
             bgcolor = "white"
             color = "#333333"
+            font_size = 16
 
             if row.get("is_title"):
                 bgcolor = "#1976d2"
                 color = "white"
                 is_bold = True
+                font_size = 20
             if row.get("is_binding"):
                 is_bold = True
                 align = "center"
@@ -1049,21 +1052,23 @@ class StaticTemplateRenderer(markdown_mixin):
                 bgcolor = "#dddddd"
 
             name = row["name"]
+            link = f' href="/lexical/{schema_entity}.html" tooltip="{schema_entity}"' if row.get("is_title") else ""
             html += "<tr>"
-            html += f'<td sides="b" width="250" height="{height}" bgcolor="{bgcolor}" align="{align}" port="{name}0">'
+            html += f'<td sides="b" width="250" height="{height}" bgcolor="{bgcolor}" align="{align}" port="{name}0"{link}>'
             if is_bold:
                 html += "<b>"
-            html += f'<font color="{color}">{row["label"]}</font>'
+            html += f'<font color="{color}" point-size="{font_size}">{row["label"]}</font>'
             if is_bold:
                 html += "</b>"
             html += "</td>"
             html += f'<td sides="b" width="20" height="{height}" bgcolor="{bgcolor}" align="right" port="{name}1">'
-            html += row.get("cardinality", "")
+            if cardinality := row.get("cardinality"):
+                html += f'<font point-size="16">{cardinality}</font>'
             html += "</td></tr>"
         html += "</table>>"
         return html
 
-    def process_graphviz_concept(self, name, markdown_text):
+    def process_graphviz_concept(self, name, markdown_text, *, source_path: Path):
         graphviz_code = filter(lambda value: value.strip().startswith("concept"), re.findall("```(.*?)```", markdown_text, re.S))
 
         def replace_edge(match):
@@ -1108,7 +1113,8 @@ class StaticTemplateRenderer(markdown_mixin):
             graph_data = re.sub(r'\w+\:\w+\[binding="[\w_]+"\]', "", graph_data)
 
             graph = pydot.graph_from_dot_data(graph_data)[0]
-            graph.set_node_defaults(shape="plaintext", width="3")
+            graph.set_node_defaults(shape="plaintext", width="3", fontname="Arial")
+            graph.set_edge_defaults(fontname="Arial")
             graph.set_nodesep("0.1")
             graph.set_splines("polyline")
             graph.set_rankdir("LR")
@@ -1142,11 +1148,24 @@ class StaticTemplateRenderer(markdown_mixin):
                 tmp_dot = tmpdir / Path(file_name).name
                 shutil.copy2(file_name, tmp_dot)
 
-                subprocess.run(
+                result = subprocess.run(
                     [shutil.which("dot") or "dot", "-O", "-Tsvg", "-Gbgcolor=#ffffff00", tmp_dot.name],
                     cwd=tmpdir,
-                    check=True,
+                    stderr=subprocess.PIPE,
+                    text=True,
                 )
+                for line in result.stderr.splitlines():
+                    print(f"{source_path.as_posix()}: {line}", file=sys.stderr, flush=True)
+                result.check_returncode()
+                unrecognized = [
+                    line for line in result.stderr.splitlines()
+                    if re.search(r"^Warning:.*\bunrecognized\b", line)
+                ]
+                if unrecognized:
+                    raise RuntimeError(
+                        f"Unrecognized Graphviz ports in {source_path.as_posix()}:\n"
+                        + "\n".join(unrecognized)
+                    )
 
                 tmp_svg = tmpdir / (tmp_dot.name + ".svg")
                 final_svg = file_name + ".svg"
@@ -1571,7 +1590,11 @@ class StaticTemplateRenderer(markdown_mixin):
         if path.exists():
             markdown = path.read_text(encoding="utf-8")
             if "concept {" in markdown:
-                diagram_markdown = self.process_graphviz_concept("".join(char for char in normalized if char.isalnum()), markdown[markdown.index("```") :])
+                diagram_markdown = self.process_graphviz_concept(
+                    "".join(char for char in normalized if char.isalnum()),
+                    markdown[markdown.index("```") :],
+                    source_path=path.relative_to(self.config.repo_root),
+                )
                 diagram = self.process_markdown("", diagram_markdown)
                 soup = BeautifulSoup(diagram)
                 for svg in soup.find_all("svg"):
@@ -2230,7 +2253,7 @@ class StaticSiteBuilder:
 
         normalized = path.strip("/")
         return any(
-            normalized == include.strip("/")
+            fnmatchcase(normalized, include.strip("/"))
             or (
                 include.strip("/")
                 and normalized.startswith(include.strip("/") + "/")
