@@ -374,7 +374,7 @@ if __name__ == "__main__":
         label = lambda version: ("ifc%d%d" % version).rstrip("0")
         current_version = tuple(version_tuple[:2])
         names = []
-        for version, schema, deprecated, psd, _, _ in RELEASES:
+        for version, schema, deprecated, psd, *_ in RELEASES:
             if version < current_version and (not is_iso or version in ((4, 0), (4, 3))):
                 names += [label(version), schema, deprecated, psd]
 
