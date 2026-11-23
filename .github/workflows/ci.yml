@@ -181,6 +181,28 @@ jobs:
           set -euxo pipefail
           python determine_mvd_scope.py ../output/IFC.exp ../output/IFC4.3.mvdxml
 
+      # The entities outside each MVD, for the MVD rules of the Validation Service
+      # (IFC430 and IFC431), kept as a downloadable artifact for 30 days (#5).
+      # 4.3 only: the script reads the schema from ifcopenshell, which has no 4.4.
+      - name: Determine MVD exclusions
+        if: matrix.content == 'ifc4.3-main'
+        working-directory: ifc43/code
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python determine_mvd_exclusions.py IFC4X3_ADD2 mvd_entity_usage.json
+
+      - name: Upload MVD exclusions
+        if: matrix.content == 'ifc4.3-main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvd-entity-exclusions-${{ matrix.content }}
+          path: |
+            ifc43/code/mvd_entity_exclusions.json
+            ifc43/code/mvd_entity_usage.json
+          retention-days: 30
+          if-no-files-found: error
+
       - name: Build static HTML site
         working-directory: ifc43/code
         shell: bash
